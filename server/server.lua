@@ -481,7 +481,7 @@ BccUtils.RPC:Register("bcc-crafting:collectCraftedItem", function(params, cb, so
 			-- Add weapon to inventory
 			local weaponAdded = exports.vorp_inventory:createWeapon(source, itemName, {})
 			if weaponAdded then
-				MySQL.execute("DELETE FROM bcc_crafting_log WHERE id = @id", { ["@id"] = craftingLog.id })
+				exports['feather-mysql']:query("DELETE FROM bcc_crafting_log WHERE id = @id", { ["@id"] = craftingLog.id })
 				NotifyClient(source, _U("CollectedWeapon") .. itemLabel, 4000, "success")
 
 				-- Award XP for crafting a weapon
@@ -538,7 +538,7 @@ BccUtils.RPC:Register("bcc-crafting:collectCraftedItem", function(params, cb, so
 
 			-- Update or delete crafting log based on remaining amount
 			if remainingAmount > 0 then
-				MySQL.execute("UPDATE bcc_crafting_log SET itemAmount = @remainingAmount WHERE id = @id", {
+				exports['feather-mysql']:query("UPDATE bcc_crafting_log SET itemAmount = @remainingAmount WHERE id = @id", {
 					["@remainingAmount"] = remainingAmount,
 					["@id"] = craftingLog.id,
 				})
@@ -550,7 +550,7 @@ BccUtils.RPC:Register("bcc-crafting:collectCraftedItem", function(params, cb, so
 					"success"
 				)
 			else
-				MySQL.execute("DELETE FROM bcc_crafting_log WHERE id = @id", { ["@id"] = craftingLog.id })
+				exports['feather-mysql']:query("DELETE FROM bcc_crafting_log WHERE id = @id", { ["@id"] = craftingLog.id })
 				devPrint("[DEBUG] Crafting log entry deleted for item: " .. itemName)
 				NotifyClient(
 					source,
@@ -608,7 +608,7 @@ BccUtils.RPC:Register("bcc-crafting:collectCraftedItem", function(params, cb, so
 				-- Update crafting log with remaining amount if some items were left
 				local remainingAmount = amountToAdd - partialAmount
 				if remainingAmount > 0 then
-					MySQL.execute("UPDATE bcc_crafting_log SET itemAmount = @remainingAmount WHERE id = @id", {
+					exports['feather-mysql']:query("UPDATE bcc_crafting_log SET itemAmount = @remainingAmount WHERE id = @id", {
 						["@remainingAmount"] = remainingAmount,
 						["@id"] = craftingLog.id,
 					})
@@ -620,7 +620,7 @@ BccUtils.RPC:Register("bcc-crafting:collectCraftedItem", function(params, cb, so
 						"success"
 					)
 				else
-					MySQL.execute("DELETE FROM bcc_crafting_log WHERE id = @id", { ["@id"] = craftingLog.id })
+					exports['feather-mysql']:query("DELETE FROM bcc_crafting_log WHERE id = @id", { ["@id"] = craftingLog.id })
 					devPrint("[DEBUG] Crafting log entry deleted for item: " .. itemName)
 					NotifyClient(
 						source,
@@ -707,7 +707,7 @@ BccUtils.RPC:Register("bcc-crafting:GetCraftingData", function(params, cb, recSo
 			devPrint("[DEBUG] No crafting data found. Initializing default data.")
 
 			-- Insert default data if none exists
-			MySQL.execute(
+			exports['feather-mysql']:query(
 				"INSERT INTO bcc_craft_progress (charidentifier, currentXP, currentLevel) VALUES (@charidentifier, 0, 1)",
 				{ ["@charidentifier"] = playerId }
 			)
@@ -779,7 +779,7 @@ function AddPlayerCraftingXP(playerId, amount, callback)
 			["lastLevel"] = newLevel,
 		}
 
-		MySQL.execute(
+		exports['feather-mysql']:query(
 			"UPDATE bcc_craft_progress SET currentXP = @currentXP, currentLevel = @currentLevel, lastLevel = @lastLevel WHERE charidentifier = @charidentifier",
 			param,
 			function(rowsAffected)
@@ -810,7 +810,7 @@ function GetPlayerCraftingData(playerId, callback)
 				local level = result[1].currentLevel
 				callback(xp, level)
 			else
-				MySQL.execute(
+				exports['feather-mysql']:query(
 					"INSERT INTO bcc_craft_progress (charidentifier, currentXP, currentLevel) VALUES (@charidentifier, 0, 1)",
 					param
 				)
