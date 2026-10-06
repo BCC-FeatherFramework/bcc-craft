@@ -274,36 +274,36 @@ BccUtils.RPC:Register("bcc-crafting:AttemptCraft", function(params, cb, source)
 		end
 
 		-- Insert crafting attempt into database
-		MySQL.insert(
-			"INSERT INTO bcc_crafting_log (charidentifier, itemName, itemLabel, itemAmount, requiredItems, status, duration, rewardXP, timestamp, locationId) VALUES (@charidentifier, @itemName, @itemLabel, @itemAmount, @requiredItems, @status, @duration, @rewardXP, @timestamp, @locationId)",
-			craftingData,
-			function(insertId)
-				if insertId then
-					item.craftingId = insertId
-					activeCrafting[source] = {
-						item = item,
-						startTime = os.time(),
-						duration = totalDuration,
-					}
-					BccUtils.RPC:Call("bcc-crafting:StartCrafting", { item = item }, nil, source)
-					Discord:sendMessage(
-						"Player ID: "
-						.. playerId
-						.. " started crafting "
-						.. tostring(item.itemLabel)
-						.. ". Amount: "
-						.. tostring(itemConfigAmount)
-						.. ". Total Duration: "
-						.. tostring(totalDuration)
-						.. "s"
-					)
-					cb(true)
-				else
-				NotifyClient(source, _U("CraftingAttemptFailed"), 4000, "error")
-					cb(false)
-				end
-			end
+		local insertOk, insertId = pcall(DB.insert,
+			"INSERT INTO bcc_crafting_log (charidentifier, itemName, itemLabel, itemAmount, requiredItems, status, duration, rewardXP, timestamp, locationId) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
+			craftingData.charidentifier, craftingData.itemName, craftingData.itemLabel, craftingData.itemAmount,
+			craftingData.requiredItems, craftingData.status, craftingData.duration, craftingData.rewardXP,
+			craftingData.timestamp, craftingData.locationId
 		)
+		if insertOk and insertId then
+			item.craftingId = insertId
+			activeCrafting[source] = {
+				item = item,
+				startTime = os.time(),
+				duration = totalDuration,
+			}
+			BccUtils.RPC:Call("bcc-crafting:StartCrafting", { item = item }, nil, source)
+			Discord:sendMessage(
+				"Player ID: "
+				.. playerId
+				.. " started crafting "
+				.. tostring(item.itemLabel)
+				.. ". Amount: "
+				.. tostring(itemConfigAmount)
+				.. ". Total Duration: "
+				.. tostring(totalDuration)
+				.. "s"
+			)
+			cb(true)
+		else
+		NotifyClient(source, _U("CraftingAttemptFailed"), 4000, "error")
+			cb(false)
+		end
 	end)
 	cb(true) -- Ensure callback is always called
 end)
@@ -375,30 +375,28 @@ AddEventHandler("bcc-crafting:getOngoingCrafting", function()
 	local _source = source
 	local Character = VORPcore.getUser(_source).getUsedCharacter
 	local charIdentifier = Character.charIdentifier -- Unique character identifier
-	MySQL.query(
-		"SELECT * FROM bcc_crafting_log WHERE charidentifier = @charidentifier AND status = 'in_progress'",
-		{ ["@charidentifier"] = charIdentifier },
-		function(result)
-			local ongoingCraftingList = {}
-			if result and #result > 0 then
-				for _, craftingLog in ipairs(result) do
-					local startTime = craftingLog.timestamp
-					local currentTime = os.time()
-					local elapsedTime = currentTime - startTime
-					local remainingTime = craftingLog.duration - elapsedTime
-					if remainingTime <= 0 then
-						MySQL.update.await(
-							"UPDATE bcc_crafting_log SET status = 'completed', completed_at = NOW() WHERE id = @id",
-							{ ["@id"] = craftingLog.id }
-						)
-						remainingTime = 0
-					end
-					table.insert(ongoingCraftingList, { craftingLog = craftingLog, remainingTime = remainingTime })
-				end
-			end
-			TriggerClientEvent("bcc-crafting:sendOngoingCraftingList", _source, ongoingCraftingList)
-		end
+	local queryOk, result = pcall(DB.query,
+		"SELECT * FROM bcc_crafting_log WHERE charidentifier = ? AND status = 'in_progress'",
+		charIdentifier
 	)
+	local ongoingCraftingList = {}
+	if queryOk and result and #result > 0 then
+		for _, craftingLog in ipairs(result) do
+			local startTime = craftingLog.timestamp
+			local currentTime = os.time()
+			local elapsedTime = currentTime - startTime
+			local remainingTime = craftingLog.duration - elapsedTime
+			if remainingTime <= 0 then
+				DB.exec(
+					"UPDATE bcc_crafting_log SET status = 'completed', completed_at = NOW() WHERE id = ?",
+					craftingLog.id
+				)
+				remainingTime = 0
+			end
+			table.insert(ongoingCraftingList, { craftingLog = craftingLog, remainingTime = remainingTime })
+		end
+	end
+	TriggerClientEvent("bcc-crafting:sendOngoingCraftingList", _source, ongoingCraftingList)
 end)
 
 -- Register the RPC for getting completed crafting items
@@ -414,19 +412,17 @@ BccUtils.RPC:Register("bcc-crafting:GetCompletedCrafting", function(_, cb, sourc
 	local charIdentifier = Character.charIdentifier
 
 	-- Query the database for completed crafting items
-	MySQL.query(
-		"SELECT * FROM bcc_crafting_log WHERE charidentifier = @charidentifier AND status = 'completed'",
-		{ ["@charidentifier"] = charIdentifier },
-		function(completedResult)
-			if completedResult and #completedResult > 0 then
-				devPrint("[DEBUG] Completed crafting data found for character: " .. tostring(charIdentifier))
-				cb(completedResult)
-			else
-				devPrint("[DEBUG] No completed crafting data found for character: " .. tostring(charIdentifier))
-				cb(false)
-			end
-		end
+	local queryOk, completedResult = pcall(DB.query,
+		"SELECT * FROM bcc_crafting_log WHERE charidentifier = ? AND status = 'completed'",
+		charIdentifier
 	)
+	if queryOk and completedResult and #completedResult > 0 then
+		devPrint("[DEBUG] Completed crafting data found for character: " .. tostring(charIdentifier))
+		cb(completedResult)
+	else
+		devPrint("[DEBUG] No completed crafting data found for character: " .. tostring(charIdentifier))
+		cb(false)
+	end
 end)
 
 -- Register the callback for collecting crafted items
@@ -481,7 +477,7 @@ BccUtils.RPC:Register("bcc-crafting:collectCraftedItem", function(params, cb, so
 			-- Add weapon to inventory
 			local weaponAdded = exports.vorp_inventory:createWeapon(source, itemName, {})
 			if weaponAdded then
-				exports['feather-mysql']:query("DELETE FROM bcc_crafting_log WHERE id = @id", { ["@id"] = craftingLog.id })
+				CreateThread(function() DB.exec("DELETE FROM bcc_crafting_log WHERE id = ?", craftingLog.id) end)
 				NotifyClient(source, _U("CollectedWeapon") .. itemLabel, 4000, "success")
 
 				-- Award XP for crafting a weapon
@@ -538,10 +534,7 @@ BccUtils.RPC:Register("bcc-crafting:collectCraftedItem", function(params, cb, so
 
 			-- Update or delete crafting log based on remaining amount
 			if remainingAmount > 0 then
-				exports['feather-mysql']:query("UPDATE bcc_crafting_log SET itemAmount = @remainingAmount WHERE id = @id", {
-					["@remainingAmount"] = remainingAmount,
-					["@id"] = craftingLog.id,
-				})
+				DB.exec("UPDATE bcc_crafting_log SET itemAmount = ? WHERE id = ?", remainingAmount, craftingLog.id)
 				devPrint("[DEBUG] Updated crafting log with remaining amount: " .. remainingAmount)
 				NotifyClient(
 					source,
@@ -550,7 +543,7 @@ BccUtils.RPC:Register("bcc-crafting:collectCraftedItem", function(params, cb, so
 					"success"
 				)
 			else
-				exports['feather-mysql']:query("DELETE FROM bcc_crafting_log WHERE id = @id", { ["@id"] = craftingLog.id })
+				DB.exec("DELETE FROM bcc_crafting_log WHERE id = ?", craftingLog.id)
 				devPrint("[DEBUG] Crafting log entry deleted for item: " .. itemName)
 				NotifyClient(
 					source,
@@ -608,10 +601,7 @@ BccUtils.RPC:Register("bcc-crafting:collectCraftedItem", function(params, cb, so
 				-- Update crafting log with remaining amount if some items were left
 				local remainingAmount = amountToAdd - partialAmount
 				if remainingAmount > 0 then
-					exports['feather-mysql']:query("UPDATE bcc_crafting_log SET itemAmount = @remainingAmount WHERE id = @id", {
-						["@remainingAmount"] = remainingAmount,
-						["@id"] = craftingLog.id,
-					})
+					DB.exec("UPDATE bcc_crafting_log SET itemAmount = ? WHERE id = ?", remainingAmount, craftingLog.id)
 					devPrint("[DEBUG] Updated crafting log with remaining amount: " .. remainingAmount)
 					NotifyClient(
 						source,
@@ -620,7 +610,7 @@ BccUtils.RPC:Register("bcc-crafting:collectCraftedItem", function(params, cb, so
 						"success"
 					)
 				else
-					exports['feather-mysql']:query("DELETE FROM bcc_crafting_log WHERE id = @id", { ["@id"] = craftingLog.id })
+					DB.exec("DELETE FROM bcc_crafting_log WHERE id = ?", craftingLog.id)
 					devPrint("[DEBUG] Crafting log entry deleted for item: " .. itemName)
 					NotifyClient(
 						source,
@@ -700,60 +690,58 @@ BccUtils.RPC:Register("bcc-crafting:GetCraftingData", function(params, cb, recSo
 	devPrint("[DEBUG] Character ID: " .. tostring(playerId))
 
 	-- Query the database directly
-	MySQL.query("SELECT currentXP, currentLevel FROM bcc_craft_progress WHERE charidentifier = @charidentifier", {
-		["@charidentifier"] = playerId,
-	}, function(result)
-		if not result or #result == 0 then
-			devPrint("[DEBUG] No crafting data found. Initializing default data.")
+	local queryOk, result = pcall(DB.query,
+		"SELECT currentXP, currentLevel FROM bcc_craft_progress WHERE charidentifier = ?", playerId)
+	if not queryOk or not result or #result == 0 then
+		devPrint("[DEBUG] No crafting data found. Initializing default data.")
 
-			-- Insert default data if none exists
-			exports['feather-mysql']:query(
-				"INSERT INTO bcc_craft_progress (charidentifier, currentXP, currentLevel) VALUES (@charidentifier, 0, 1)",
-				{ ["@charidentifier"] = playerId }
-			)
+		-- Insert default data if none exists
+		pcall(DB.exec,
+			"INSERT INTO bcc_craft_progress (charidentifier, currentXP, currentLevel) VALUES (?, 0, 1)",
+			playerId
+		)
 
-			-- Default response for a new player
-			local craftingData = {
-				level = 1,
-				xpToNextLevel = Config.LevelThresholds[1].xpPerLevel,
-				categories = params.categories or {},
-			}
-			return cb(craftingData)
-		end
-
-		-- Extract current XP and level
-		local currentXP = result[1].currentXP
-		local level = result[1].currentLevel
-		devPrint("[DEBUG] Retrieved XP: " .. tostring(currentXP) .. ", Level: " .. tostring(level))
-
-		-- Calculate XP required for the next level
-		local xpForNextLevel = 0
-		for _, threshold in ipairs(Config.LevelThresholds) do
-			if level >= threshold.minLevel and level <= threshold.maxLevel then
-				xpForNextLevel = threshold.xpPerLevel
-				break
-			end
-		end
-
-		if xpForNextLevel == 0 then
-			devPrint("[DEBUG] XP threshold not found for level: " .. tostring(level))
-			return cb(false)
-		end
-
-		-- Calculate the remaining XP to the next level
-		local xpToNextLevel = xpForNextLevel - (currentXP % xpForNextLevel)
-		devPrint("[DEBUG] XP to next level: " .. tostring(xpToNextLevel))
-
-		-- Prepare the response
+		-- Default response for a new player
 		local craftingData = {
-			level = level,
-			xpToNextLevel = math.max(0, xpToNextLevel), -- Ensure no negative values
-			categories = params.categories or {}, -- Include any categories passed in params
+			level = 1,
+			xpToNextLevel = Config.LevelThresholds[1].xpPerLevel,
+			categories = params.categories or {},
 		}
-
-		-- Send the result back
 		return cb(craftingData)
-	end)
+	end
+
+	-- Extract current XP and level
+	local currentXP = result[1].currentXP
+	local level = result[1].currentLevel
+	devPrint("[DEBUG] Retrieved XP: " .. tostring(currentXP) .. ", Level: " .. tostring(level))
+
+	-- Calculate XP required for the next level
+	local xpForNextLevel = 0
+	for _, threshold in ipairs(Config.LevelThresholds) do
+		if level >= threshold.minLevel and level <= threshold.maxLevel then
+			xpForNextLevel = threshold.xpPerLevel
+			break
+		end
+	end
+
+	if xpForNextLevel == 0 then
+		devPrint("[DEBUG] XP threshold not found for level: " .. tostring(level))
+		return cb(false)
+	end
+
+	-- Calculate the remaining XP to the next level
+	local xpToNextLevel = xpForNextLevel - (currentXP % xpForNextLevel)
+	devPrint("[DEBUG] XP to next level: " .. tostring(xpToNextLevel))
+
+	-- Prepare the response
+	local craftingData = {
+		level = level,
+		xpToNextLevel = math.max(0, xpToNextLevel), -- Ensure no negative values
+		categories = params.categories or {}, -- Include any categories passed in params
+	}
+
+	-- Send the result back
+	return cb(craftingData)
 end)
 
 -- Function to add player crafting XP
@@ -772,20 +760,11 @@ function AddPlayerCraftingXP(playerId, amount, callback)
 		devPrint("Remaining XP after leveling: " .. remainingXP)
 
 		-- Update the database
-		local param = {
-			["charidentifier"] = playerId,
-			["currentXP"] = remainingXP,
-			["currentLevel"] = newLevel,
-			["lastLevel"] = newLevel,
-		}
-
-		exports['feather-mysql']:query(
-			"UPDATE bcc_craft_progress SET currentXP = @currentXP, currentLevel = @currentLevel, lastLevel = @lastLevel WHERE charidentifier = @charidentifier",
-			param,
-			function(rowsAffected)
-				devPrint("Database Update Result: " .. json.encode(rowsAffected) .. " rows affected")
-			end
+		local execOk, rowsAffected = pcall(DB.exec,
+			"UPDATE bcc_craft_progress SET currentXP = ?, currentLevel = ?, lastLevel = ? WHERE charidentifier = ?",
+			remainingXP, newLevel, newLevel, playerId
 		)
+		devPrint("Database Update Result: " .. json.encode(execOk and rowsAffected or nil) .. " rows affected")
 
 		-- Notify callback if level increased
 		if newLevel > lastLevel then
@@ -800,24 +779,19 @@ end
 
 -- Function to get player crafting data (XP and level)
 function GetPlayerCraftingData(playerId, callback)
-	local param = { ["charidentifier"] = playerId }
-	MySQL.query(
-		"SELECT currentXP, currentLevel FROM bcc_craft_progress WHERE charidentifier = @charidentifier",
-		param,
-		function(result)
-			if #result > 0 then
-				local xp = result[1].currentXP
-				local level = result[1].currentLevel
-				callback(xp, level)
-			else
-				exports['feather-mysql']:query(
-					"INSERT INTO bcc_craft_progress (charidentifier, currentXP, currentLevel) VALUES (@charidentifier, 0, 1)",
-					param
-				)
-				callback(0, 1)
-			end
-		end
-	)
+	local ok, result = pcall(DB.query,
+		"SELECT currentXP, currentLevel FROM bcc_craft_progress WHERE charidentifier = ?", playerId)
+	if ok and result and #result > 0 then
+		local xp = result[1].currentXP
+		local level = result[1].currentLevel
+		callback(xp, level)
+	else
+		pcall(DB.insert,
+			"INSERT INTO bcc_craft_progress (charidentifier, currentXP, currentLevel) VALUES (?, 0, 1)",
+			playerId
+		)
+		callback(0, 1)
+	end
 end
 
 -- Calculate the player's level and remaining XP based on dynamic LevelThresholds
@@ -991,15 +965,11 @@ end)
 
 -- Function to update crafting status
 function updateCraftingStatus(craftingId, status)
-	local params = {
-		["id"] = craftingId,
-		["status"] = status,
-		["completed_at"] = status == "completed" and os.date("%Y-%m-%d %H:%M:%S") or nil,
-	}
+	local completedAt = status == "completed" and os.date("%Y-%m-%d %H:%M:%S") or nil
 
-	MySQL.update.await(
-		"UPDATE bcc_crafting_log SET status = @status, completed_at = @completed_at WHERE id = @id",
-		params
+	DB.exec(
+		"UPDATE bcc_crafting_log SET status = ?, completed_at = ? WHERE id = ?",
+		status, completedAt, craftingId
 	)
 end
 

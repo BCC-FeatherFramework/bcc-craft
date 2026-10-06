@@ -1,6 +1,6 @@
 CreateThread(function()
     -- Create the bcc_crafting_log table if it doesn't exist
-    MySQL.query.await([[
+    DB.exec([[
         CREATE TABLE IF NOT EXISTS `bcc_crafting_log` (
             `id` int(11) NOT NULL AUTO_INCREMENT,
             `charidentifier` varchar(50) NOT NULL,
@@ -18,7 +18,7 @@ CreateThread(function()
     ]])
 
     -- Create the bcc_craft_progress table if it doesn't exist
-    MySQL.query.await([[
+    DB.exec([[
         CREATE TABLE IF NOT EXISTS `bcc_craft_progress` (
             `charidentifier` varchar(50) NOT NULL,
             `currentXP` int(11) NOT NULL DEFAULT 0,
@@ -28,18 +28,18 @@ CreateThread(function()
     ]])
 
     -- Add the lastLevel column if it doesn't already exist
-    MySQL.query.await([[
+    DB.exec([[
         ALTER TABLE `bcc_craft_progress` ADD COLUMN IF NOT EXISTS `lastLevel` int(11) NOT NULL DEFAULT 1;
     ]])
 
     -- Update lastLevel to match currentLevel for all existing records
-    MySQL.query.await([[
+    DB.exec([[
         UPDATE `bcc_craft_progress`
         SET `lastLevel` = `currentLevel`;
     ]])
 
     -- Inserting craftbooks into the items table only if they do not exist
-    MySQL.query.await([[
+    DB.exec([[
         INSERT INTO `items` (`item`, `label`, `limit`, `can_remove`, `type`, `usable`, `desc`)
         VALUES
         ('food_craftbook', 'Food Craftbook', 1, 1, 'item_standard', 1, 'Used to open the food crafting menu.'),
@@ -51,7 +51,7 @@ CreateThread(function()
     ]])
 
     --  Added locationId to be able to collect the crafted items from where start the crafting
-    MySQL.query.await([[
+    DB.exec([[
         ALTER TABLE `bcc_crafting_log` ADD COLUMN IF NOT EXISTS `locationId` VARCHAR(50) DEFAULT NULL;
     ]])
     
