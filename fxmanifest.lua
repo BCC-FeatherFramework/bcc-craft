@@ -20,7 +20,7 @@ client_scripts {
 }
 
 server_scripts {
-    '@feather-mysql/lib/MySQL.lua',
+    '@feather-mysql/lib/DB.lua',
     'server/functions.lua',
     'server/dbUpdater.lua',
     'server/server.lua'
