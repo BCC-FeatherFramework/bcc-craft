@@ -38,17 +38,30 @@ CreateThread(function()
         SET `lastLevel` = `currentLevel`;
     ]])
 
-    -- Inserting craftbooks into the items table only if they do not exist
-    DB.exec([[
-        INSERT INTO `items` (`item`, `label`, `limit`, `can_remove`, `type`, `usable`, `desc`)
-        VALUES
-        ('food_craftbook', 'Food Craftbook', 1, 1, 'item_standard', 1, 'Used to open the food crafting menu.'),
-        ('weapons_craftbook', 'Weapons Craftbook', 1, 1, 'item_standard', 1, 'Used to open the weapons crafting menu.'),
-        ('items_craftbook', 'Items Craftbook', 1, 1, 'item_standard', 1, 'Used to open the items crafting menu.'),
-        ('others_craftbook', 'Others Craftbook', 1, 1, 'item_standard', 1, 'Used to open the miscellaneous items crafting menu.')
-        ON DUPLICATE KEY UPDATE
-        `label`=VALUES(`label`), `limit`=VALUES(`limit`), `can_remove`=VALUES(`can_remove`), `type`=VALUES(`type`), `usable`=VALUES(`usable`), `desc`=VALUES(`desc`);
-    ]])
+    -- Craft books are feather-inventory items. Every book named in the config
+    -- (location craftbookCategory and category craftBookItem) is added once;
+    -- existing items keep their IDs and settings.
+    local books = {}
+    for _, location in ipairs(CraftingLocations) do
+        if location.craftbookCategory and location.craftbookCategory ~= "" then
+            books[location.craftbookCategory] = (location.blip and location.blip.label or "Crafting") .. " Craftbook"
+        end
+        for _, category in ipairs(location.categories or {}) do
+            if category.craftBookItem and category.craftBookItem ~= "" then
+                books[category.craftBookItem] = (category.label or "Crafting") .. " Craftbook"
+            end
+        end
+    end
+    for name, label in pairs(books) do
+        pcall(DB.exec, [[
+            INSERT INTO `items`
+                (`name`, `display_name`, `description`, `max_quantity`, `max_stack_size`, `weight`, `usable`, `category_id`, `type`, `instance_mode`)
+            SELECT ?, ?, 'Used to open the crafting menu.', 1, 1, 0.1, 1,
+                (SELECT `id` FROM `categories` ORDER BY (`name` = 'documents') DESC, (`name` = 'other') DESC, `id` LIMIT 1),
+                'item_item', 'stack'
+            WHERE NOT EXISTS (SELECT 1 FROM `items` WHERE `name` = ?)
+        ]], name, label, name)
+    end
 
     --  Added locationId to be able to collect the crafted items from where start the crafting
     DB.exec([[

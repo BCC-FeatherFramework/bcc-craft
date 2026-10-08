@@ -1,12 +1,12 @@
 Config = {
-    -- Language setting
-    defaultlang = 'en_lang',
+    -- Language: translations come from feather-core, so each player sees their own
+    -- language (languages/*.lua register en_us, ro, pl, de and it).
 
     -- Development mode toggle
     devMode = false, -- Set to false on a live server
 
-    -- Notifications
-    Notify = "feather-menu",
+    -- Notifications are shown through feather-notify; autoClose is the duration.
+    Notify = "feather-notify",
     NotifyOptions = {
         type = "info",
         autoClose = 4000,
@@ -67,7 +67,16 @@ Config = {
     allowGlobalCollection = false, -- true = can collect crafted items from anywhere
     HasCraftBooks = false,    --This will show a button to every location so they can buy craftbook from there
 
-    -- If you want to use BCC-UserLog API's
+    -- Recipe requiredJobs use feather-jobs job keys: 'job' or { 'job', minGrade }.
+    -- minGrade is the feather-jobs grade ordinal. Set requireOnDuty to also need duty.
+    JobAccess = {
+        requireOnDuty = false
+    },
+
+    -- Craft books with a price take dollars and gold from the wallet through
+    -- feather-economy. craftbookpricexp is not checked: Feather has no character XP yet.
+
+    -- If you want to use BCC-UserLog API's (playtime, by Steam identifier)
     -- Global toggle for using playtime restrictions
     useBccUserlog = false
 }
