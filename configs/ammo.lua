@@ -87,7 +87,7 @@ local ammunitions = {
                         requiredPlaytimeMinutes = 0
                     },
                     {
-                        itemName = "ammoshotgunnormal",
+                        itemName = "ammo_shotgun_regular",
                         itemLabel = "Shotgun Ammo (Regular)",
                         requiredJobs = false,
                         --or you can use 
@@ -111,7 +111,7 @@ local ammunitions = {
                         requiredPlaytimeMinutes = 0
                     },
                     {
-                        itemName = "ammoshotgunslug",
+                        itemName = "ammo_shotgun_slug",
                         itemLabel = "Shotgun Ammo (Slug)",
                         requiredJobs = false,
                         --or you can use 
@@ -135,7 +135,7 @@ local ammunitions = {
                         requiredPlaytimeMinutes = 0
                     },
                     {
-                        itemName = "ammorevolvernormal",
+                        itemName = "ammo_revolver_regular",
                         itemLabel = "Revolver Ammo (Regular)",
                         requiredJobs = false,
                         rewardXP = 20,
@@ -154,7 +154,7 @@ local ammunitions = {
                         requiredPlaytimeMinutes = 0
                     },
                     {
-                        itemName = "ammorevolverexpress",
+                        itemName = "ammo_revolver_express",
                         itemLabel = "Revolver Ammo (Express)",
                         requiredJobs = false,
                         rewardXP = 60,
@@ -173,7 +173,7 @@ local ammunitions = {
                         requiredPlaytimeMinutes = 0
                     },
                     {
-                        itemName = "ammorevolvervelocity",
+                        itemName = "ammo_revolver_high_velocity",
                         itemLabel = "Revolver Ammo (Velocity)",
                         requiredJobs = false,
                         rewardXP = 60,
@@ -192,7 +192,7 @@ local ammunitions = {
                         requiredPlaytimeMinutes = 0
                     },
                     {
-                        itemName = "ammopistolnormal",
+                        itemName = "ammo_pistol_regular",
                         itemLabel = "Pistol Ammo (Regular)",
                         requiredJobs = false,
                         rewardXP = 20,
@@ -211,7 +211,7 @@ local ammunitions = {
                         requiredPlaytimeMinutes = 0
                     },
                     {
-                        itemName = "ammopistolexpress",
+                        itemName = "ammo_pistol_express",
                         itemLabel = "Pistol Ammo (Express)",
                         requiredJobs = false,
                         rewardXP = 60,
@@ -230,7 +230,7 @@ local ammunitions = {
                         requiredPlaytimeMinutes = 0
                     },
                     {
-                        itemName = "ammorepeaternormal",
+                        itemName = "ammo_repeater_regular",
                         itemLabel = "Repeater Ammo (Regular)",
                         requiredJobs = false,
                         rewardXP = 20,
@@ -249,7 +249,7 @@ local ammunitions = {
                         requiredPlaytimeMinutes = 0
                     },
                     {
-                        itemName = "ammorepeatervelocity",
+                        itemName = "ammo_repeater_high_velocity",
                         itemLabel = "Repeater Ammo (Velocity)",
                         requiredJobs = false,
                         rewardXP = 60,
@@ -268,7 +268,7 @@ local ammunitions = {
                         requiredPlaytimeMinutes = 0
                     },
                     {
-                        itemName = "ammorepeaterexpress",
+                        itemName = "ammo_repeater_express",
                         itemLabel = "Repeater Ammo (Express)",
                         requiredJobs = false,
                         rewardXP = 60,
@@ -287,7 +287,7 @@ local ammunitions = {
                         requiredPlaytimeMinutes = 0
                     },
                     {
-                        itemName = "ammoriflenormal",
+                        itemName = "ammo_rifle_regular",
                         itemLabel = "Rifle Ammo (Regular)",
                         requiredJobs = false,
                         rewardXP = 20,
@@ -306,7 +306,7 @@ local ammunitions = {
                         requiredPlaytimeMinutes = 0
                     },
                     {
-                        itemName = "ammorifleexpress",
+                        itemName = "ammo_rifle_express",
                         itemLabel = "Rifle Ammo (Express)",
                         requiredJobs = false,
                         rewardXP = 60,
@@ -325,7 +325,7 @@ local ammunitions = {
                         requiredPlaytimeMinutes = 0
                     },
                     {
-                        itemName = "ammoriflevelocity",
+                        itemName = "ammo_rifle_high_velocity",
                         itemLabel = "Rifle Ammo (Velocity)",
                         requiredJobs = false,
                         rewardXP = 60,
@@ -344,7 +344,7 @@ local ammunitions = {
                         requiredPlaytimeMinutes = 0
                     },
                     {
-                        itemName = "ammoelephant",
+                        itemName = "ammo_rifle_elephant",
                         itemLabel = "Elephant Rifle Ammo",
                         requiredJobs = false,
                         rewardXP = 20,
@@ -363,7 +363,7 @@ local ammunitions = {
                         requiredPlaytimeMinutes = 0
                     },
                     {
-                        itemName = "ammovarmint",
+                        itemName = "ammo_varmint",
                         itemLabel = "Varmint Ammo",
                         requiredJobs = false,
                         rewardXP = 10,

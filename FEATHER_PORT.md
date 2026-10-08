@@ -74,5 +74,6 @@ start; restart feather-inventory afterwards so it loads them.
 
 1. Live test every flow: craft with and without animation, cancel, queue, collect (full
    and partial), tool wear and break, weapon craft, book use, book purchase.
-2. Recipe items that do not exist in feather-inventory (the smoke test lists them) need
-   item definitions; retired weapons (for example the standard lantern) need recipes removed.
+2. Import `sql/install_items.sql` (47 materials, tools, food and tobacco items), then restart
+   feather-inventory and bcc-craft. Ammunition recipes produce feather-weapons ammo items
+   (`ammo_revolver_regular`, ...); the retired Standard Lantern recipe is commented out.

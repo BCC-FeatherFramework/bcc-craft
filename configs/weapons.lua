@@ -61,6 +61,8 @@ local weapons = {
                         playAnimation = false,
                         requiredPlaytimeMinutes = 0
                     },
+                    -- Standard Lantern is retired in feather-weapons (Davy Lantern below replaces it).
+                    --[[
                     {
                         itemName = "WEAPON_MELEE_LANTERN",
                         itemLabel = "Lantern",
@@ -82,6 +84,7 @@ local weapons = {
                         playAnimation = false,
                         requiredPlaytimeMinutes = 0
                     },
+                    ]]
                     {
                         itemName = "WEAPON_MELEE_DAVY_LANTERN",
                         itemLabel = "Davy Lantern",
