@@ -7,7 +7,10 @@ if Config.devMode then
     function devPrint(...)
         local args = { ... }
         for i = 1, select('#', ...) do args[i] = tostring(args[i]) end
-        print("^1[DEV MODE]^3 " .. table.concat(args, " ") .. "^0")
+        -- One print per line, each ending with ^0 so the color never carries over.
+        for line in (table.concat(args, " ") .. "\n"):gmatch("(.-)\n") do
+            print("^1[DEV MODE]^3 " .. line .. "^0")
+        end
     end
 else
     function devPrint(...) end
