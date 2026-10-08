@@ -1,5 +1,5 @@
 ---------------------------------- DEUTSCH -------------------------------------------
-Locales["de_lang"] = {
+Feather.Locale.register("de", {
     PromptName = 'Herstellung',
     BlipName = 'Handwerksname',
     CraftBook = 'Handwerksbuch',
@@ -103,4 +103,4 @@ Locales["de_lang"] = {
     --- Neue benötigte Gegenstände
     NeededItem = "Benötigte Werkzeuge",
     MissingNeededItem = "Fehlendes Werkzeug: ",
-}
+})

@@ -1,113 +1,4 @@
--- Pulling Essentials
-VORPcore = exports.vorp_core:GetCore()
-
-FeatherMenu = exports["feather-menu"].initiate()
-BccUtils = exports["bcc-utils"].initiate()
-progressbar = exports["feather-progressbar"]:initiate()
-
-BCCCraftingMenu = FeatherMenu:RegisterMenu("bcc:crafting:mainmenu",
-    {
-        top = '3%',
-        left = '3%',
-        ['720width'] = '400px',
-        ['1080width'] = '500px',
-        ['2kwidth'] = '600px',
-        ['4kwidth'] = '800px',
-        style = {
-            --['background-image'] = 'url("nui://bcc-craft/assets/background.png")',
-            --['background-size'] = 'cover',  
-            --['background-repeat'] = 'no-repeat',
-                --['background-position'] = 'center',
-                --['background-color'] = 'rgba(55, 33, 14, 0.7)', -- A leather-like brown
-                --['border'] = '1px solid #654321', 
-                --['font-family'] = 'Times New Roman, serif', 
-                --['font-size'] = '38px',
-                --['color'] = '#ffffff', 
-                --['padding'] = '10px 20px',
-                --['margin-top'] = '5px',
-                --['cursor'] = 'pointer', 
-                --['box-shadow'] = '3px 3px #333333', 
-                --['text-transform'] = 'uppercase', 
-        },
-        contentslot = {
-            style = {
-                ['height'] = '450px',
-                ['min-height'] = '300px'
-            }
-        },
-    },
-    {
-        opened = function()
-            DisplayRadar(false)
-        end,
-        closed = function()
-            DisplayRadar(true)
-            cleanupCampfireIfExists()
-        end
-    }
-)
-
--- Helper function for debugging in DevMode
-if Config.devMode then
-    function devPrint(message)
-       print("^1[DEV MODE]^3 " .. message .. "^0")
-    end
-else
-    function devPrint(message) end -- No-op if DevMode is disabled
-end
-
-function Notify(message, typeOrDuration, maybeDuration, overrides)
-    overrides = overrides or {}
-    local opts = Config.NotifyOptions or {}
-
-    local notifyType = opts.type or "info"
-    local notifyDuration = opts.autoClose or 4000
-
-    if type(typeOrDuration) == "string" then
-        notifyType = typeOrDuration
-        notifyDuration = tonumber(maybeDuration) or notifyDuration
-    elseif type(typeOrDuration) == "number" then
-        notifyDuration = typeOrDuration
-    end
-
-    local notifyPosition = overrides.position or opts.position or "bottom-center"
-    local notifyTransition = overrides.transition or opts.transition or "slide"
-    local notifyIcon = overrides.icon
-    if notifyIcon == nil then notifyIcon = opts.icon end
-    local hideProgressBar = overrides.hideProgressBar
-    if hideProgressBar == nil then hideProgressBar = opts.hideProgressBar end
-    local rtl = overrides.rtl
-    if rtl == nil then rtl = opts.rtl end
-
-    if Config.Notify == "feather-menu" then
-        FeatherMenu:Notify({
-            message = message,
-            type = notifyType,
-            autoClose = notifyDuration,
-            position = notifyPosition,
-            transition = notifyTransition,
-            icon = notifyIcon,
-            hideProgressBar = hideProgressBar,
-            rtl = rtl or false,
-            style = overrides.style or opts.style or {},
-            toastStyle = overrides.toastStyle or opts.toastStyle or {},
-            progressStyle = overrides.progressStyle or opts.progressStyle or {}
-        })
-    elseif Config.Notify == "vorp-core" then
-        VORPcore.NotifyRightTip(message, notifyDuration)
-    else
-        print("^1[Notify] Invalid Config.Notify: " .. tostring(Config.Notify))
-    end
-end
-
-BccUtils.RPC:Register("bcc-crafting:NotifyClient", function(data)
-    if not data or not data.message then return end
-
-    local notifyType = data.type
-    local duration = tonumber(data.duration)
-
-    Notify(data.message, notifyType, duration)
-end)
+-- Framework setup (menu, RPC, Notify, progressbar, devPrint) lives in client/feather/init.lua.
 
 -- Handle player death and close menu
 function HandlePlayerDeathAndCloseMenu()
@@ -142,9 +33,8 @@ function attemptCraftItem(item, amount)
     local durationMs = (tonumber(item.duration)) * item.itemAmount * 1000
     devPrint("[CRAFTING] Total crafting duration in milliseconds: " .. tostring(durationMs))
     devPrint("[CLIENT] Sending item to CanCraft: " .. json.encode(item))
-    BccUtils.RPC:Call("bcc-crafting:CanCraft", { item = item, locationId = currentCraftingLocationId }, function(canCraft, message)
+    FeatherRPC:Call("bcc-crafting:CanCraft", { item = item, locationId = currentCraftingLocationId }, function(canCraft, message)
         if not canCraft then
-            --VORPcore.NotifyRightTip("Cannot start crafting.", 4000)
             return
         end
 
@@ -170,7 +60,7 @@ function attemptCraftItem(item, amount)
                     ClearPedTasks(ped)
 
                     -- Now do the real crafting
-                    BccUtils.RPC:Call("bcc-crafting:AttemptCraft", { item = item, locationId = currentCraftingLocationId }, function(success, err)
+                    FeatherRPC:Call("bcc-crafting:AttemptCraft", { item = item, locationId = currentCraftingLocationId }, function(success, err)
                         if success then
                             Notify(_U("CraftingComplete"), "success", 4000)
                         else
@@ -190,7 +80,7 @@ function attemptCraftItem(item, amount)
             SetNuiFocus(false, false)
         else
             -- No animation, do crafting immediately
-            BccUtils.RPC:Call("bcc-crafting:AttemptCraft", { item = item, locationId = currentCraftingLocationId }, function(success, err)
+            FeatherRPC:Call("bcc-crafting:AttemptCraft", { item = item, locationId = currentCraftingLocationId }, function(success, err)
                 if success then
                     Notify("Crafting started successfully for " .. item.itemLabel, "success", 4000)
                 else
@@ -218,7 +108,7 @@ function fetchItemLimit(itemName, cb)
         devPrint("[DEBUG] Item is a weapon, fetching weapon limit for:", tostring(itemName))
 
         -- Make the RPC call to fetch the weapon limit
-        BccUtils.RPC:Call("bcc-crafting:getWeaponLimit", {}, function(canCarry)
+        FeatherRPC:Call("bcc-crafting:getWeaponLimit", {}, function(canCarry)
             if canCarry then
                 devPrint("[DEBUG] Weapon limit check passed for:", tostring(itemName))
                 cb("Unlimited") -- Weapons have no limit
@@ -231,7 +121,7 @@ function fetchItemLimit(itemName, cb)
     end
 
     -- Make the RPC call to fetch the item limit for non-weapons
-    BccUtils.RPC:Call("bcc-crafting:getItemLimit", { itemName = itemName }, function(itemLimit)
+    FeatherRPC:Call("bcc-crafting:getItemLimit", { itemName = itemName }, function(itemLimit)
         if not itemLimit then
             devPrint("[ERROR] Failed to retrieve item limit for item:", tostring(itemName))
             cb("N/A")

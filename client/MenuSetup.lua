@@ -1,6 +1,6 @@
 local showCraftBookcategory = false
 
-BccUtils.RPC:Register("bcc-crafting:OpenCategoryMenu", function(params, cb)
+FeatherRPC:Register("bcc-crafting:OpenCategoryMenu", function(params, cb)
 	local categoryName = params.categoryName
 	if not categoryName then
 		devPrint("[ERROR] Category name is missing!")
@@ -8,7 +8,7 @@ BccUtils.RPC:Register("bcc-crafting:OpenCategoryMenu", function(params, cb)
 	end
 
 	-- Fetch formatted category list from the server
-	local craftingData = BccUtils.RPC:CallAsync("bcc-crafting:GetCraftingData", { categories = { categoryName } })
+	local craftingData = FeatherRPC:CallAsync("bcc-crafting:GetCraftingData", { categories = { categoryName } })
 	if not craftingData or not craftingData.categories or #craftingData.categories == 0 then
 		devPrint("[ERROR] No valid crafting categories returned from server.")
 		return cb(false)
@@ -24,11 +24,11 @@ end)
 function openCraftingItemMenu(item, categoryName, itemLimit)
 	devPrint("Opening crafting item menu: " .. tostring(item.itemLabel) .. " in category: " .. tostring(categoryName))
 
-	local imgPath = "nui://vorp_inventory/html/img/items/" .. item.itemName .. ".png"
+	local imgPath = "nui://feather-inventory/ui/images/items/" .. item.itemName .. ".png"
 
 	local requiredItemsImageBoxes = {}
 	for index, reqItem in ipairs(item.requiredItems) do
-		local reqImgPath = "nui://vorp_inventory/html/img/items/" .. reqItem.itemName .. ".png"
+		local reqImgPath = "nui://feather-inventory/ui/images/items/" .. reqItem.itemName .. ".png"
 		local label = reqItem.itemLabel or reqItem.itemName or "?"
 		local count = tonumber(reqItem.itemCount) or 0
 
@@ -200,7 +200,7 @@ end
 function openCraftingAmountInput(item, categoryName, currentLocationCategories)
 	local inputValue = nil
 	-- First request max craftable amount
-	BccUtils.RPC:Call("bcc-crafting:GetMaxCraftAmount", { item = item }, function(maxCraftable)
+	FeatherRPC:Call("bcc-crafting:GetMaxCraftAmount", { item = item, locationId = currentCraftingLocationId }, function(maxCraftable)
 		if not maxCraftable then
 			devPrint("[ERROR] Failed to get max craftable amount.")
 			Notify("Cannot determine how many items you can craft.", "error", 4000)
@@ -293,7 +293,7 @@ AddEventHandler("bcc-crafting:openmenu", function(categories)
 	end
 
 	devPrint("Requesting crafting data from the server")
-	local craftingData = BccUtils.RPC:CallAsync("bcc-crafting:GetCraftingData", { categories = categories })
+	local craftingData = FeatherRPC:CallAsync("bcc-crafting:GetCraftingData", { categories = categories })
 	if not craftingData then
 		Notify("Failed to retrieve crafting data from the server.", "error", 4000)
 		devPrint("Failed to retrieve crafting data from the server.")
@@ -349,7 +349,7 @@ AddEventHandler("bcc-crafting:openmenu", function(categories)
 
 					for index, item in ipairs(matchedCategory.items) do
 						devPrint("Adding item to menu: " .. item.itemLabel)
-						local imgPath = "nui://vorp_inventory/html/img/items/" .. item.itemName .. ".png"
+						local imgPath = "nui://feather-inventory/ui/images/items/" .. item.itemName .. ".png"
 						itemLookup[index] = item
 
 						table.insert(imageBoxItems, {
@@ -434,7 +434,7 @@ AddEventHandler("bcc-crafting:openmenu", function(categories)
 		style = {},
 		slot = "footer",
 	}, function()
-		BccUtils.RPC:Call("bcc-crafting:GetCompletedCrafting", {}, function(completedCraftingData)
+		FeatherRPC:Call("bcc-crafting:GetCompletedCrafting", {}, function(completedCraftingData)
 			if completedCraftingData then
 				TriggerEvent("bcc-crafting:sendCompletedCraftingList", completedCraftingData)
 			else
@@ -601,7 +601,7 @@ function openCraftbookLocationPage(location)
             label = _U("craftbookAllCategories"),
             style = { padding = "5px" },
         }, function()
-            BccUtils.RPC:Call("bcc-crafting:giveBook", {
+            FeatherRPC:Call("bcc-crafting:giveBook", {
                 item = location.craftbookCategory,
                 label = locationLabel
             })
@@ -653,7 +653,7 @@ function openCraftbookLocationPage(location)
 			label = "📙 " .. (category.label or category.name),
 			style = { padding = "4px" }
 		}, function()
-			BccUtils.RPC:Call("bcc-crafting:giveBook", {
+			FeatherRPC:Call("bcc-crafting:giveBook", {
 				item = category.craftBookItem,
 				label = category.label or category.name
 			})
@@ -876,7 +876,7 @@ function openCompletedCraftingMenu(completedCraftingList, currentLocationCategor
 			}, function()
 				devPrint("Collecting crafted item: " .. craftingLog.itemLabel)
 
-				BccUtils.RPC:Call("bcc-crafting:collectCraftedItem", {
+				FeatherRPC:Call("bcc-crafting:collectCraftedItem", {
 					craftingLog = craftingLog,
 					locationId = currentCraftingLocationId,
 				}, function(success)
@@ -886,7 +886,7 @@ function openCompletedCraftingMenu(completedCraftingList, currentLocationCategor
 						devPrint("Failed to collect the crafted item.")
 					end
 
-					BccUtils.RPC:Call("bcc-crafting:GetCompletedCrafting", {}, function(completedCraftingData)
+					FeatherRPC:Call("bcc-crafting:GetCompletedCrafting", {}, function(completedCraftingData)
 						if completedCraftingData then
 							devPrint("[DEBUG] Completed crafting data retrieved successfully.")
 							TriggerEvent("bcc-crafting:sendCompletedCraftingList", completedCraftingData)
@@ -925,7 +925,7 @@ function openCompletedCraftingMenu(completedCraftingList, currentLocationCategor
 end
 
 -- Client-side RPC to handle starting crafting
-BccUtils.RPC:Register("bcc-crafting:StartCrafting", function(params, cb)
+FeatherRPC:Register("bcc-crafting:StartCrafting", function(params, cb)
 	local item = params.item
 	if not item or not item.itemLabel or not item.itemName then
 		devPrint("[ERROR] Missing or invalid item data for starting crafting.")

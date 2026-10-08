@@ -5,9 +5,10 @@ myCampfire = nil
 CreateThread(function()
     devPrint("Thread started") -- Devprint
 
-    local CraftingMenuPrompt = BccUtils.Prompts:SetupPromptGroup()
-
-    local craftingprompt = CraftingMenuPrompt:RegisterPrompt(_U('PromptName'), 0x760A9C6F, 1, 1, true, 'click', nil)
+    -- Prompt through feather-toolkit
+    local CraftingMenuPrompt = GetRandomIntInRange(0, 0xffffff)
+    local created = Toolkit:CreatePrompt({ control = 0x760A9C6F, label = _U('PromptName'), groupId = CraftingMenuPrompt })
+    local craftingprompt = type(created) == 'table' and created.ok and created.value.id or nil
 
     -- Iterate over CraftingLocations from the config
     for _, location in pairs(CraftingLocations) do
@@ -17,22 +18,29 @@ CreateThread(function()
 
                 -- Blip handling
                 if location.blip and location.blip.show then
-                    local CraftingBlip = BccUtils.Blips:SetBlip(location.blip.label, location.blip.sprite, location.blip.scale, coord.x, coord.y, coord.z)
-                    local blipModifier = BccUtils.Blips:AddBlipModifier(CraftingBlip, location.blip.color)
-                    blipModifier:ApplyModifier()
-                    CreatedBlip[#CreatedBlip + 1] = CraftingBlip
+                    local blip = Toolkit:CreateBlip({ name = location.blip.label, sprite = location.blip.sprite,
+                        x = coord.x, y = coord.y, z = coord.z })
+                    if type(blip) == 'table' and blip.ok then
+                        if location.blip.color then
+                            Citizen.InvokeNative(0x662D364ABF16DE2F, blip.value.handle, joaat(location.blip.color)) -- BlipAddModifier
+                        end
+                        CreatedBlip[#CreatedBlip + 1] = blip.value.id
+                    end
                 else
                     devPrint("Blips disabled for location: " .. tostring(coord))
                 end
 
                 -- NPC handling
                 if location.npc and location.npc.show then
-                    craftingped = BccUtils.Ped:Create(location.npc.model, coord.x, coord.y, coord.z - 1, 0, 'world', false)
-                    CreatedNpc[#CreatedNpc + 1] = craftingped
-                    craftingped:Freeze()
-                    craftingped:SetHeading(heading)
-                    craftingped:Invincible()
-                    craftingped:SetBlockingOfNonTemporaryEvents(true)
+                    local ped = Toolkit:CreatePed({ model = location.npc.model, x = coord.x, y = coord.y, z = coord.z - 1,
+                        heading = heading, networked = false })
+                    if type(ped) == 'table' and ped.ok then
+                        local handle = ped.value.entity
+                        FreezeEntityPosition(handle, true)
+                        SetEntityInvincible(handle, true)
+                        SetBlockingOfNonTemporaryEvents(handle, true)
+                        CreatedNpc[#CreatedNpc + 1] = ped.value.id
+                    end
                 else
                     devPrint("NPCs disabled for location: " .. tostring(coord))
                 end
@@ -61,9 +69,10 @@ CreateThread(function()
                     local dist = #(playerCoords - coord)
                     if dist < 2 then
                         currentCraftingLocationId = location.locationId
-                        CraftingMenuPrompt:ShowGroup(location.blip.label)
+                        Toolkit:ShowPromptGroup(CraftingMenuPrompt, location.blip.label)
 
-                        if craftingprompt:HasCompleted() then
+                        local completed = craftingprompt and Toolkit:IsPromptCompleted(craftingprompt)
+                        if type(completed) == 'table' and completed.ok and completed.value.completed then
                             devPrint("Crafting prompt has been completed")
                             TriggerEvent('bcc-crafting:openmenu', location.categories)
                         end
@@ -76,7 +85,7 @@ CreateThread(function()
     end
 end)
 
-BccUtils.RPC:Register("bcc-crafting:craftbook:use", function(category, cb)
+FeatherRPC:Register("bcc-crafting:craftbook:use", function(category, cb)
     local playerPed = PlayerPedId()
     local coords = GetEntityCoords(playerPed)
 
@@ -119,7 +128,7 @@ BccUtils.RPC:Register("bcc-crafting:craftbook:use", function(category, cb)
     if cb then cb(true) end
 end)
 
-BccUtils.RPC:Register("bcc-crafting:craftbook:useLocation", function(data, cb)
+FeatherRPC:Register("bcc-crafting:craftbook:useLocation", function(data, cb)
     currentCraftingLocationId = data.locationId
 
     local playerPed = PlayerPedId()
@@ -165,11 +174,12 @@ end)
 -- Cleanup when the resource stops
 AddEventHandler("onResourceStop", function(resource)
     if resource == GetCurrentResourceName() then
-        for _, v in pairs(CreatedBlip) do
-            v:Remove()
+        -- feather-toolkit also releases owned blips and peds when this resource stops.
+        for _, id in pairs(CreatedBlip) do
+            Toolkit:RemoveBlip(id)
         end
-        for _, v in pairs(CreatedNpc) do
-            v:Remove()
+        for _, id in pairs(CreatedNpc) do
+            Toolkit:RemoveEntity(id)
         end
         BCCCraftingMenu:Close()
         -- Remove campfire if it exists

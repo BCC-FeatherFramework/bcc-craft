@@ -1,5 +1,5 @@
 ---------------------------------- ROMÂNĂ -------------------------------------------
-Locales["ro_lang"] = {
+Feather.Locale.register("ro", {
     PromptName = 'Craftare',
     BlipName = 'Punct de Craftare',
     CraftBook = 'Carte de Craft',
@@ -103,4 +103,4 @@ Locales["ro_lang"] = {
     --- New Needed Items
     NeededItem = "Unelte Necesare",
     MissingNeededItem = "Lipsă Unealtă: ",
-}
+})
